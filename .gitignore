@@ -245,6 +245,6 @@ UpgradeLog*.htm
 FakesAssemblies/
 
 # Diagnostic scripts
-tools/__pycache__/
+tools/**/__pycache__/
 
 

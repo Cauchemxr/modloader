@@ -53,13 +53,47 @@ If an independent `DK22Pac/plugin-sdk` checkout is available, additionally use
 That repository is only an optional external reference; do not vendor it or
 assume its symbol mappings cover every Mod Loader patch site.
 
-The initial private dump audit found 88 annotated direct-call sites, of which
-only 41 still contain a call opcode at their original 1.0 mapped address.
-The independent plugin-sdk supplies 21 exact 1.0-to-Steam address counterparts
-among the 156 simple literal targets. Two agreeing nearby SDK anchors suggested
-25 further call-site addresses, all 25 containing a call opcode in the Steam
-dump. These are **candidates only** and cannot be used without verifying the
-call destination, surrounding instructions, and expected patch behavior.
+To save a per-address review queue (without any captured game code), run:
+
+```sh
+python3 tools/audit-gta3-11-addresses.py /path/to/private-gta3-text.bin \
+  --sdk-root /path/to/plugin-sdk \
+  --csv-report /path/to/local-address-audit.csv
+```
+
+The CSV explicitly labels direct SDK mappings, SDK metadata cross-references,
+containing-function matches, and weaker neighboring-address projections.
+It is **not** a ready-to-compile translation table.
+
+The private dump audit found 88 annotated call sites, of which only 41 still
+contain a call opcode at their original 1.0 address. The independent plugin-sdk
+provides Steam equivalents for 21 of 156 simple literal targets, plus 10 more
+via aligned references to their containing functions.
+
+The SDK also explicitly pairs 41 of the annotated 1.0 call sites with Steam
+call sites. Decoding the runtime call destinations agrees with SDK function
+entry points for **39 of those 41**. Two still require manual review; one
+has a call destination outside GTA III's `.text` range in the provided live
+snapshot, so simply checking for opcode `E8` is insufficient.
+
+The conservative CSV classifications currently break down as:
+
+| Evidence category | Entries |
+| --- | ---: |
+| SDK cross-reference with matching destination | 39 |
+| Other explicit SDK address mapping | 21 |
+| SDK containing-function mapping | 10 |
+| SDK cross-reference needing manual review | 2 |
+| SDK-neighbor projection with call opcode only | 19 |
+| SDK-neighbor projection of non-call position | 5 |
+| Unchanged location with call opcode only | 17 |
+| Unresolved | 43 |
+| **Total audited literal targets** | **156** |
+
+These counts describe independent static evidence only. The stronger address
+correspondences still need per-plugin patch-site and calling-convention review.
+The many projection-only and unresolved entries mean **Steam 1.1 execution
+support must remain disabled**.
 
 This identifies places where a 1.0 `call` address no longer points to a call
 instruction and lists nearby candidates. The tool verifies four independently
