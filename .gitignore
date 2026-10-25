@@ -244,4 +244,7 @@ UpgradeLog*.htm
 # Microsoft Fakes
 FakesAssemblies/
 
+# Diagnostic scripts
+tools/__pycache__/
+
 

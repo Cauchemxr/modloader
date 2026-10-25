@@ -12,6 +12,10 @@ and all patches have been validated against the target game.
 - `.text` RVA `0x1000`, virtual size `0x1F2770`.
 - The on-disk `.text` contents are encrypted. Static disassembly of the file
   cannot establish the target functions' addresses.
+- A privately captured runtime `.text` image has now been supplied (SHA-256
+  `ec25e220f2d533ff9294e551adc397c7b8681e7dbb44e96999b397ccd5f148d7`).
+  It is 2,041,712 bytes and contains valid x86 instructions. **This dump must
+  not be stored in Git.**
 - The existing injector detects GTA III 1.1 Steam, but
   `src/translator/translator.cpp` initializes GTA III's address map only for
   version 1.0. Consequently the WinMain address translation fails in
@@ -37,6 +41,30 @@ The collector is limited to a single identified executable hash and reads only
 the `.text` pages (`ReadProcessMemory`, without writing or injecting). It
 rejects a capture if the first sample of bytes still matches the encrypted
 on-disk section. Its output must be checked before any address table is added.
+
+To audit direct-call opcode locations in the private runtime capture:
+
+```sh
+python3 tools/audit-gta3-11-addresses.py /path/to/private-gta3-text.bin
+```
+
+If an independent `DK22Pac/plugin-sdk` checkout is available, additionally use
+`--sdk-root /path/to/plugin-sdk` to compare documented 1.0 and Steam addresses.
+That repository is only an optional external reference; do not vendor it or
+assume its symbol mappings cover every Mod Loader patch site.
+
+The initial private dump audit found 88 annotated direct-call sites, of which
+only 41 still contain a call opcode at their original 1.0 mapped address.
+The independent plugin-sdk supplies 21 exact 1.0-to-Steam address counterparts
+among the 156 simple literal targets. Two agreeing nearby SDK anchors suggested
+25 further call-site addresses, all 25 containing a call opcode in the Steam
+dump. These are **candidates only** and cannot be used without verifying the
+call destination, surrounding instructions, and expected patch behavior.
+
+This identifies places where a 1.0 `call` address no longer points to a call
+instruction and lists nearby candidates. The tool verifies four independently
+inspected 1.1 call-site anchors. **Opcode matching does not imply compatible
+semantics or permission to apply a hook**; each candidate still needs review.
 
 ## Porting and validation steps
 
