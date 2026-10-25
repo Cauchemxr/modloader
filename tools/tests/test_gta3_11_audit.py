@@ -84,6 +84,20 @@ META_END
         self.write_call(0x403122, 0x404000)
         self.assertEqual(self.classify()[:2], (0x403122, "sdk-xref-needs-review"))
 
+    def test_inspected_anchor_overrides_nearby_sdk_projections(self) -> None:
+        previous = audit.INSPECTED_CALL_SITES
+        self.addCleanup(setattr, audit, "INSPECTED_CALL_SITES", previous)
+        audit.INSPECTED_CALL_SITES = {0x401120: (0x403122, 0x403100)}
+        self.write_call(0x403122, 0x403100)
+        self.assertEqual(self.classify()[:2], (0x403122, "inspected-call-target-match"))
+
+    def test_inspected_anchor_does_not_hide_runtime_mismatch(self) -> None:
+        previous = audit.INSPECTED_CALL_SITES
+        self.addCleanup(setattr, audit, "INSPECTED_CALL_SITES", previous)
+        audit.INSPECTED_CALL_SITES = {0x401120: (0x403122, 0x403100)}
+        self.write_call(0x403122, 0x404000)
+        self.assertEqual(self.classify()[:2], (0x403122, "inspected-call-target-mismatch"))
+
     def test_unverified_neighbor_projection_is_not_promoted(self) -> None:
         projected = audit.project_from_nearby_sdk_anchors(
             0x401150,

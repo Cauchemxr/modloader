@@ -19,6 +19,14 @@ import struct
 
 TEXT_BASE = 0x401000
 EXPECTED_TEXT_SIZE = 0x1F2770
+# Manually inspected call-site pairs; (Steam address, expected direct target).
+# These take precedence over inferred nearest-neighbor offsets.
+INSPECTED_CALL_SITES = {
+    0x5C1F39: (0x5C7099, 0x582940),  # Startup WinMain
+    0x48E8FD: (0x48E8FF, 0x48D5D0),  # Idle
+    0x48E90F: (0x48E911, 0x48BF40),  # FrontendIdle
+    0x48BF5E: (0x48BF61, 0x5A0D40),  # Particle texture
+}
 
 
 @dataclass(frozen=True)
@@ -287,6 +295,17 @@ def classify_mapping(
     methods: dict[str, set[int]],
 ) -> tuple[int | None, str, str]:
     """Classify independent evidence without silently elevating a guess."""
+    inspected = INSPECTED_CALL_SITES.get(row.target)
+    if row.is_call_site and inspected:
+        candidate, expected_target = inspected
+        actual_target = relative_call_target(text, candidate)
+        if actual_target == expected_target:
+            return candidate, "inspected-call-target-match", (
+                f"Call destination 0x{actual_target:X}"
+            )
+        return candidate, "inspected-call-target-mismatch", (
+            f"Expected 0x{expected_target:X}, found {actual_target!r}"
+        )
     if row.is_call_site and row.target in xrefs:
         equivalents = xrefs[row.target]
         if len(equivalents) != 1:
@@ -396,18 +415,12 @@ def main() -> int:
               f"[{opcode_kind(text, entry.target)}] => {candidate_str or 'none'} | {entry.comment}")
 
     # Individually inspected GTA III 1.1 Steam anchors, independent of 1.0.
-    anchors = {
-        0x5C7099: 0x582940,  # Startup WinMain call
-        0x48E8FF: 0x48D5D0,  # Idle hook site
-        0x48E911: 0x48BF40,  # Frontend idle hook site
-        0x48BF61: 0x5A0D40,  # Texture loading call site
-    }
-    for address, expected_target in anchors.items():
+    for address, expected_target in INSPECTED_CALL_SITES.values():
         actual_target = relative_call_target(text, address)
         if actual_target != expected_target:
             print(f"FAIL anchor 0x{address:X}: expected 0x{expected_target:X}, got {actual_target!r}")
             return 2
-    print(f"Verified {len(anchors)} explicitly inspected 1.1 call-site anchors.")
+    print(f"Verified {len(INSPECTED_CALL_SITES)} explicitly inspected 1.1 call-site anchors.")
     if args.sdk_root:
         sdk_direct = sdk_mappings(args.sdk_root)
         sdk_owners = sdk_meta_owner_mappings(args.sdk_root)

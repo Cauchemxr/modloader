@@ -81,19 +81,27 @@ The conservative CSV classifications currently break down as:
 | Evidence category | Entries |
 | --- | ---: |
 | SDK cross-reference with matching destination | 39 |
+| Independently inspected call with matching destination | 4 |
 | Other explicit SDK address mapping | 21 |
 | SDK containing-function mapping | 10 |
 | SDK cross-reference needing manual review | 2 |
-| SDK-neighbor projection with call opcode only | 19 |
+| SDK-neighbor projection with call opcode only | 17 |
 | SDK-neighbor projection of non-call position | 5 |
 | Unchanged location with call opcode only | 17 |
-| Unresolved | 43 |
+| Unresolved | 41 |
 | **Total audited literal targets** | **156** |
 
 These counts describe independent static evidence only. The stronger address
 correspondences still need per-plugin patch-site and calling-convention review.
 The many projection-only and unresolved entries mean **Steam 1.1 execution
 support must remain disabled**.
+
+**Important:** the SDK-neighbor estimator proposed *wrong* locations for
+`Idle` and `FrontendIdle` despite finding valid call opcodes there. Their
+independently verified call sites are `0x48E8FF` and `0x48E911`, respectively.
+The audit now gives the four independently inspected anchors precedence over
+every heuristic. Never treat a nearby call opcode alone as evidence of a safe
+patch site.
 
 This identifies places where a 1.0 `call` address no longer points to a call
 instruction and lists nearby candidates. The tool verifies four independently
